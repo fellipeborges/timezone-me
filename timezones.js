@@ -7,20 +7,6 @@
   const MAX_SUGGESTIONS = 60;
   const SNAP_MINUTES = 30;
   const SNAP_SLOTS = (24 * 60) / SNAP_MINUTES;
-  const MONTHS = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
 
   // Regions, countries and nicknames that have no IANA entry of their own.
   const ALIASES = {
@@ -297,7 +283,6 @@
     if (!fmt) {
       fmt = new Intl.DateTimeFormat("en-GB", {
         timeZone: tz,
-        weekday: "short",
         month: "2-digit",
         day: "2-digit",
         year: "numeric",
@@ -517,12 +502,10 @@
       const row = document.createElement("div");
       row.className = "hour-row";
 
-      let prevDay = null;
       columns.forEach((ms) => {
         const cellDate = new Date(ms);
         const p = getParts(cellDate, tz);
         const hour = Number(p.hour);
-        const dayKey = `${p.year}-${p.month}-${p.day}`;
         const cell = document.createElement("div");
         const work = hour >= WORK_START && hour < WORK_END;
         const lunch = lunchSlice(hour, Number(p.minute));
@@ -540,14 +523,6 @@
         num.className = "hour-num";
         num.textContent = String(hour).padStart(2, "0");
         cell.appendChild(num);
-
-        if (prevDay !== dayKey) {
-          const chip = document.createElement("span");
-          chip.className = "hour-date";
-          chip.textContent = `${p.weekday} ${MONTHS[Number(p.month) - 1]} ${Number(p.day)}`;
-          cell.appendChild(chip);
-          prevDay = dayKey;
-        }
 
         row.appendChild(cell);
       });
