@@ -218,6 +218,7 @@
 
   const els = {
     side: document.getElementById("side"),
+    people: document.getElementById("people"),
     hourRows: document.getElementById("hour-rows"),
     hoursInner: document.getElementById("hours-inner"),
     hoursScroller: document.getElementById("hours-scroller"),
@@ -231,6 +232,8 @@
   const clockFormatters = new Map();
 
   let extraZones = readZonesFromUrl();
+  let peopleNames = readPeopleFromUrl();
+  let editingPeopleIndex = null;
   let followNow = true;
   let selectedFraction = nowFraction(HOME_TZ);
   let highlightIndex = 0;
@@ -268,12 +271,35 @@
     return zones;
   }
 
+  function readPeopleFromUrl() {
+    const count = extraZones.length + 1;
+    const names = Array(count).fill("");
+    const raw = new URLSearchParams(location.search).get("n");
+    if (raw == null || raw === "") return names;
+    const pieces = raw.split(",");
+    for (let i = 0; i < Math.min(pieces.length, count); i++) {
+      try {
+        names[i] = decodeURIComponent(pieces[i]);
+      } catch (_) {
+        names[i] = pieces[i];
+      }
+    }
+    return names;
+  }
+
   function writeZonesToUrl() {
     const url = new URL(location.href);
     if (extraZones.length) {
       url.searchParams.set("tz", extraZones.join(","));
     } else {
       url.searchParams.delete("tz");
+    }
+    const slots = peopleNames.slice();
+    while (slots.length && !slots[slots.length - 1]) slots.pop();
+    if (!slots.length) {
+      url.searchParams.delete("n");
+    } else {
+      url.searchParams.set("n", slots.map(encodeURIComponent).join(","));
     }
     history.replaceState(null, "", url);
   }
@@ -457,9 +483,13 @@
     const selected = new Date(instantAtFraction(civil, selectedFraction));
     const columns = columnInstants(civil);
     const zones = allZones();
+    while (peopleNames.length < zones.length) peopleNames.push("");
+    if (peopleNames.length > zones.length) peopleNames.length = zones.length;
 
     els.side.innerHTML = "";
+    els.people.innerHTML = "";
     els.hourRows.innerHTML = "";
+    editingPeopleIndex = null;
 
     zones.forEach((tz, index) => {
       const isHome = index === 0;
@@ -498,6 +528,11 @@
       }
 
       els.side.appendChild(meta);
+
+      const peopleCell = document.createElement("div");
+      peopleCell.className = "people-cell";
+      peopleCell.appendChild(createPeopleLabel(index));
+      els.people.appendChild(peopleCell);
 
       const row = document.createElement("div");
       row.className = "hour-row";
@@ -553,11 +588,66 @@
     els.nowMarker.style.opacity = followNow ? "0" : "0.7";
   }
 
+  function fillPeopleLabel(label, index) {
+    const value = peopleNames[index] || "";
+    if (value) {
+      label.classList.remove("is-empty");
+      label.textContent = value;
+    } else {
+      label.classList.add("is-empty");
+      label.textContent = "Add names";
+    }
+  }
+
+  function createPeopleLabel(index) {
+    const label = document.createElement("button");
+    label.type = "button";
+    label.className = "people-label";
+    label.setAttribute("aria-label", "Edit people names");
+    fillPeopleLabel(label, index);
+    label.addEventListener("click", () => startPeopleEdit(index));
+    return label;
+  }
+
+  function commitPeopleEdit(textarea) {
+    const index = Number(textarea.dataset.index);
+    peopleNames[index] = textarea.value.trimEnd();
+    editingPeopleIndex = null;
+    writeZonesToUrl();
+    const cell = textarea.parentElement;
+    if (!cell) return;
+    textarea.remove();
+    cell.appendChild(createPeopleLabel(index));
+  }
+
+  function startPeopleEdit(index) {
+    if (editingPeopleIndex === index) return;
+    if (editingPeopleIndex != null) {
+      const open = els.people.querySelector(".people-input");
+      if (open) open.blur();
+    }
+    const cell = els.people.children[index];
+    if (!cell) return;
+    cell.innerHTML = "";
+    const textarea = document.createElement("textarea");
+    textarea.className = "people-input";
+    textarea.dataset.index = String(index);
+    textarea.value = peopleNames[index] || "";
+    textarea.setAttribute("aria-label", "People names");
+    textarea.addEventListener("blur", () => commitPeopleEdit(textarea));
+    cell.appendChild(textarea);
+    editingPeopleIndex = index;
+    textarea.focus();
+    const end = textarea.value.length;
+    textarea.setSelectionRange(end, end);
+  }
+
   function addZone(tz) {
     if (!tz || tz === HOME_TZ || extraZones.includes(tz) || !isValidTimeZone(tz)) {
       return;
     }
     extraZones.push(tz);
+    peopleNames.push("");
     writeZonesToUrl();
     closeList();
     els.search.value = "";
@@ -565,7 +655,10 @@
   }
 
   function removeZone(tz) {
-    extraZones = extraZones.filter((z) => z !== tz);
+    const i = extraZones.indexOf(tz);
+    if (i === -1) return;
+    extraZones.splice(i, 1);
+    peopleNames.splice(i + 1, 1);
     writeZonesToUrl();
     render();
   }
