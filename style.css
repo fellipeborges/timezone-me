@@ -171,9 +171,14 @@ body {
   white-space: nowrap;
 }
 
-.meta-offset {
+.meta-country {
   color: var(--muted);
   font-size: 0.75rem;
+  line-height: 1.2;
+  padding-right: 1.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .meta-clock {

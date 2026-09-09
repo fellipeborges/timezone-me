@@ -302,7 +302,6 @@
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
-        timeZoneName: "shortOffset",
       });
       partFormatters.set(tz, fmt);
     }
@@ -378,10 +377,33 @@
     return Math.min(max, Math.max(min, n));
   }
 
-  function gmtLabel(date, tz) {
-    const p = getParts(date, tz);
-    const raw = p.timeZoneName || "GMT";
-    return raw.replace(/^UTC/, "GMT").replace(/^GMT(?=[+-])/, "GMT");
+  const TZ_COUNTRY = (() => {
+    const map = Object.create(null);
+    const table = typeof TZ_COUNTRY_TABLE === "string" ? TZ_COUNTRY_TABLE : "";
+    for (const line of table.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("Etc/")) continue;
+      const splitAt = trimmed.lastIndexOf(" ");
+      if (splitAt < 1) continue;
+      map[trimmed.slice(0, splitAt)] = trimmed.slice(splitAt + 1);
+    }
+    return map;
+  })();
+
+  const regionNames =
+    typeof Intl.DisplayNames === "function"
+      ? new Intl.DisplayNames("en", { type: "region" })
+      : null;
+
+  function countryName(tz) {
+    if (tz === "UTC" || tz === "GMT" || tz.startsWith("Etc/")) return "UTC";
+    const code = TZ_COUNTRY[tz];
+    if (!code) return "";
+    try {
+      return regionNames ? regionNames.of(code) : code;
+    } catch (_) {
+      return code;
+    }
   }
 
   function instantAtFraction(civil, fraction) {
@@ -445,6 +467,10 @@
       const meta = document.createElement("div");
       meta.className = "meta";
 
+      const country = document.createElement("div");
+      country.className = "meta-country";
+      country.textContent = countryName(tz);
+
       const name = document.createElement("div");
       name.className = "meta-name";
       name.textContent = cityName(tz);
@@ -455,15 +481,12 @@
         name.appendChild(badge);
       }
 
-      const offset = document.createElement("div");
-      offset.className = "meta-offset";
-      offset.textContent = gmtLabel(selected, tz);
-
       const clock = document.createElement("div");
       clock.className = "meta-clock";
       clock.textContent = getClockFormatter(tz).format(selected);
 
-      meta.append(name, offset, clock);
+      if (country.textContent) meta.appendChild(country);
+      meta.append(name, clock);
 
       if (!isHome) {
         const remove = document.createElement("button");
@@ -518,10 +541,8 @@
     if (followNow) selectedFraction = nowFraction(HOME_TZ, now);
     const selected = new Date(instantAtFraction(civil, selectedFraction));
     const clocks = els.side.querySelectorAll(".meta-clock");
-    const offsets = els.side.querySelectorAll(".meta-offset");
     allZones().forEach((tz, i) => {
       if (clocks[i]) clocks[i].textContent = getClockFormatter(tz).format(selected);
-      if (offsets[i]) offsets[i].textContent = gmtLabel(selected, tz);
     });
     updateMarkers();
   }
