@@ -305,6 +305,25 @@ body {
   cursor: ew-resize;
 }
 
+.site-footer {
+  flex-shrink: 0;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.site-footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 640px) {
   :root {
     --side-w: 140px;
