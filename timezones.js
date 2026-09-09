@@ -1,6 +1,9 @@
 (() => {
   const WORK_START = 7;
   const WORK_END = 18;
+  const LUNCH_START_MIN = 12 * 60;
+  const LUNCH_END_MIN = 13 * 60 + 30;
+  const CELL_MINUTES = 60;
   const MAX_SUGGESTIONS = 60;
   const SNAP_MINUTES = 30;
   const SNAP_SLOTS = (24 * 60) / SNAP_MINUTES;
@@ -330,6 +333,17 @@
     return map;
   }
 
+  function lunchSlice(hour, minute) {
+    const cellStart = hour * 60 + minute;
+    const cellEnd = cellStart + CELL_MINUTES;
+    const overlapStart = Math.max(cellStart, LUNCH_START_MIN);
+    const overlapEnd = Math.min(cellEnd, LUNCH_END_MIN);
+    if (overlapEnd <= overlapStart) return null;
+    const left = ((overlapStart - cellStart) / CELL_MINUTES) * 100;
+    const width = ((overlapEnd - overlapStart) / CELL_MINUTES) * 100;
+    return { left, width, full: left <= 0 && width >= 100 };
+  }
+
   function zonedToUtc(tz, year, month, day, hour = 0, minute = 0, second = 0) {
     const target = Date.UTC(year, month - 1, day, hour, minute, second);
     let utc = target;
@@ -511,7 +525,16 @@
         const dayKey = `${p.year}-${p.month}-${p.day}`;
         const cell = document.createElement("div");
         const work = hour >= WORK_START && hour < WORK_END;
-        cell.className = `hour ${work ? "work" : "off"}`;
+        const lunch = lunchSlice(hour, Number(p.minute));
+        if (lunch?.full) {
+          cell.className = "hour lunch";
+        } else if (lunch) {
+          cell.className = `hour ${work ? "work" : "off"} lunch-partial`;
+          cell.style.setProperty("--lunch-left", `${lunch.left}%`);
+          cell.style.setProperty("--lunch-width", `${lunch.width}%`);
+        } else {
+          cell.className = `hour ${work ? "work" : "off"}`;
+        }
 
         const num = document.createElement("span");
         num.className = "hour-num";
