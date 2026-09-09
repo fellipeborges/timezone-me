@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timezone Me</title>
+    <meta name="theme-color" content="#0f1115" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1115'/%3E%3Cg fill='none' stroke='%233ee0c5' stroke-width='1.6'%3E%3Ccircle cx='16' cy='16' r='10'/%3E%3Cellipse cx='16' cy='16' rx='4.4' ry='10' opacity='.5'/%3E%3Cpath d='M6 16h20' opacity='.5'/%3E%3C/g%3E%3Cpath d='M16 9.6V16l4.4 2.8' fill='none' stroke='%23f5c14a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <h1>Timezone Me</h1>
+        <span class="tagline">Compare local time across the globe</span>
+      </div>
+
+      <div class="combobox" id="combobox">
+        <input
+          id="tz-search"
+          type="text"
+          role="combobox"
+          autocomplete="off"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="tz-list"
+          aria-label="Add timezone"
+          placeholder="Search city or timezone…"
+        />
+        <ul id="tz-list" class="tz-list" role="listbox" hidden></ul>
+      </div>
+    </header>
+
+    <main class="board" id="board">
+      <div class="side" id="side"></div>
+      <div class="hours-scroller" id="hours-scroller">
+        <div class="hours-inner" id="hours-inner">
+          <div class="now-marker" id="now-marker" title="Now"></div>
+          <div class="playhead" id="playhead"></div>
+          <div class="hour-rows" id="hour-rows"></div>
+        </div>
+      </div>
+    </main>
+
+    <script src="timezones.js"></script>
+  </body>
+</html>
