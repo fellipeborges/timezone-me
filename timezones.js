@@ -238,6 +238,7 @@
   let selectedFraction = 0;
   let highlightIndex = 0;
   let suggestions = [];
+  let dragFrom = null;
 
   function cityName(tz) {
     return tz.split("/").pop().replace(/_/g, " ");
@@ -504,6 +505,33 @@
       const meta = document.createElement("div");
       meta.className = "meta";
 
+      const handle = document.createElement("button");
+      handle.type = "button";
+      handle.className = "reorder-tz";
+      handle.draggable = true;
+      handle.setAttribute("aria-label", `Reorder ${cityName(tz)}`);
+      handle.setAttribute("title", "Drag to reorder");
+      handle.addEventListener("dragstart", (e) => {
+        dragFrom = index;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", tz);
+        e.dataTransfer.setDragImage(meta, 20, meta.offsetHeight / 2);
+        setRowClass(index, "is-dragging", true);
+      });
+      handle.addEventListener("dragend", () => {
+        dragFrom = null;
+        clearRowDragState();
+      });
+      handle.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          moveZone(index, index - 1, true);
+        } else if (e.key === "ArrowDown") {
+          e.preventDefault();
+          moveZone(index, index + 1, true);
+        }
+      });
+
       const country = document.createElement("div");
       country.className = "meta-country";
       country.textContent = countryName(tz);
@@ -516,6 +544,7 @@
       clock.className = "meta-clock";
       clock.textContent = getClockFormatter(tz).format(selected);
 
+      meta.appendChild(handle);
       if (country.textContent) meta.appendChild(country);
       meta.append(name, clock);
 
@@ -563,6 +592,10 @@
       });
 
       els.hourRows.appendChild(row);
+
+      bindRowDropTarget(meta, index);
+      bindRowDropTarget(peopleCell, index);
+      bindRowDropTarget(row, index);
     });
 
     updateMarkers();
@@ -661,6 +694,77 @@
     peopleNames.splice(i, 1);
     writeZonesToUrl();
     render();
+  }
+
+  function rowParts(index) {
+    return [
+      els.side.children[index],
+      els.people.children[index],
+      els.hourRows.children[index],
+    ];
+  }
+
+  function setRowClass(index, className, on) {
+    for (const el of rowParts(index)) {
+      if (el) el.classList.toggle(className, on);
+    }
+  }
+
+  function clearRowDragState() {
+    for (const col of [els.side, els.people, els.hourRows]) {
+      for (const el of col.children) {
+        el.classList.remove("is-dragging", "is-drop-before", "is-drop-after");
+      }
+    }
+  }
+
+  function insertBeforeFromPointer(index, clientY, target) {
+    const n = extraZones.length;
+    if (index === n - 1) {
+      const rect = target.getBoundingClientRect();
+      if (clientY > rect.top + rect.height / 2) return n;
+    }
+    return index;
+  }
+
+  function setDropIndicator(insertBefore) {
+    const n = extraZones.length;
+    for (let i = 0; i < n; i++) {
+      setRowClass(i, "is-drop-before", insertBefore === i);
+      setRowClass(i, "is-drop-after", insertBefore === n && i === n - 1);
+    }
+  }
+
+  function bindRowDropTarget(el, index) {
+    el.addEventListener("dragover", (e) => {
+      if (dragFrom == null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      setDropIndicator(insertBeforeFromPointer(index, e.clientY, el));
+    });
+    el.addEventListener("drop", (e) => {
+      if (dragFrom == null) return;
+      e.preventDefault();
+      const insertBefore = insertBeforeFromPointer(index, e.clientY, el);
+      const from = dragFrom;
+      const to = from < insertBefore ? insertBefore - 1 : insertBefore;
+      dragFrom = null;
+      clearRowDragState();
+      moveZone(from, to);
+    });
+  }
+
+  function moveZone(from, to, focusHandle = false) {
+    const n = extraZones.length;
+    if (from < 0 || from >= n || to < 0 || to >= n || from === to) return;
+    extraZones.splice(to, 0, extraZones.splice(from, 1)[0]);
+    peopleNames.splice(to, 0, peopleNames.splice(from, 1)[0]);
+    writeZonesToUrl();
+    render();
+    if (focusHandle) {
+      const handle = els.side.children[to]?.querySelector(".reorder-tz");
+      handle?.focus();
+    }
   }
 
   // Lower rank sorts first. Alias hits rank just below the equivalent

@@ -185,9 +185,54 @@ body {
   justify-content: center;
   gap: 0.15rem;
   height: var(--row-h);
-  padding: 0.7rem 0.9rem;
+  padding: 0.7rem 0.9rem 0.7rem 1.05rem;
   border-bottom: 1px solid var(--border);
   position: relative;
+}
+
+.reorder-tz {
+  position: absolute;
+  left: 0.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.625rem;
+  height: 1.55rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: radial-gradient(circle, var(--muted) 1px, transparent 1.1px) 0 2px /
+    5px 5px;
+  color: transparent;
+  cursor: grab;
+}
+
+.reorder-tz:hover,
+.reorder-tz:focus-visible {
+  background-color: var(--accent-dim);
+  outline: none;
+}
+
+.reorder-tz:active,
+.meta.is-dragging .reorder-tz {
+  cursor: grabbing;
+}
+
+.meta.is-dragging,
+.people-cell.is-dragging,
+.hour-row.is-dragging {
+  opacity: 0.4;
+}
+
+.meta.is-drop-before,
+.people-cell.is-drop-before,
+.hour-row.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.meta.is-drop-after,
+.people-cell.is-drop-after,
+.hour-row.is-drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .meta-name {
