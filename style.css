@@ -394,12 +394,63 @@ body {
 
 .site-footer {
   flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 1.25rem;
   padding: 0.55rem 1rem;
   border-top: 1px solid var(--border);
   background: var(--bg-raised);
   color: var(--muted);
   font-size: 0.8rem;
-  text-align: center;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-swatch {
+  width: 1.15rem;
+  height: 0.85rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.legend-swatch.off {
+  background: var(--off);
+}
+
+.legend-swatch.work {
+  background: var(--work);
+}
+
+.legend-swatch.lunch {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      var(--lunch-stripe) 0 2px,
+      transparent 2px 6px
+    ),
+    var(--lunch);
+}
+
+.site-credit {
+  margin: 0;
+  margin-left: auto;
 }
 
 .site-footer a {
