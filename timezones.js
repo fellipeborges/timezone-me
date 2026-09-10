@@ -214,8 +214,6 @@
     return FALLBACK_TIMEZONES;
   })();
 
-  const HOME_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-
   const els = {
     side: document.getElementById("side"),
     people: document.getElementById("people"),
@@ -226,6 +224,8 @@
     nowMarker: document.getElementById("now-marker"),
     search: document.getElementById("tz-search"),
     list: document.getElementById("tz-list"),
+    board: document.getElementById("board"),
+    empty: document.getElementById("board-empty"),
   };
 
   const partFormatters = new Map();
@@ -235,7 +235,7 @@
   let peopleNames = readPeopleFromUrl();
   let editingPeopleIndex = null;
   let followNow = true;
-  let selectedFraction = nowFraction(HOME_TZ);
+  let selectedFraction = 0;
   let highlightIndex = 0;
   let suggestions = [];
 
@@ -264,7 +264,7 @@
       } catch (_) {
         tz = piece.trim();
       }
-      if (!tz || tz === HOME_TZ || seen.has(tz) || !isValidTimeZone(tz)) continue;
+      if (!tz || seen.has(tz) || !isValidTimeZone(tz)) continue;
       seen.add(tz);
       zones.push(tz);
     }
@@ -272,7 +272,7 @@
   }
 
   function readPeopleFromUrl() {
-    const count = extraZones.length + 1;
+    const count = extraZones.length;
     const names = Array(count).fill("");
     const raw = new URLSearchParams(location.search).get("n");
     if (raw == null || raw === "") return names;
@@ -382,8 +382,12 @@
     };
   }
 
-  function homeCivilDate(date) {
-    const p = getParts(date, HOME_TZ);
+  function baseTz() {
+    return extraZones[0] || "UTC";
+  }
+
+  function baseCivilDate(date) {
+    const p = getParts(date, baseTz());
     return {
       year: Number(p.year),
       month: Number(p.month),
@@ -435,8 +439,9 @@
     const t = clamp(fraction, 0, 0.999999) * 24;
     const hour = Math.min(23, Math.floor(t));
     const rem = t - hour;
+    const tz = baseTz();
     const start = zonedToUtc(
-      HOME_TZ,
+      tz,
       civil.year,
       civil.month,
       civil.day,
@@ -447,10 +452,10 @@
     let end;
     if (hour >= 23) {
       const next = addCivilDay(civil.year, civil.month, civil.day);
-      end = zonedToUtc(HOME_TZ, next.year, next.month, next.day, 0, 0, 0);
+      end = zonedToUtc(tz, next.year, next.month, next.day, 0, 0, 0);
     } else {
       end = zonedToUtc(
-        HOME_TZ,
+        tz,
         civil.year,
         civil.month,
         civil.day,
@@ -463,14 +468,15 @@
   }
 
   function allZones() {
-    return [HOME_TZ, ...extraZones];
+    return extraZones;
   }
 
   function columnInstants(civil) {
+    const tz = baseTz();
     const instants = [];
     for (let hour = 0; hour < 24; hour++) {
       instants.push(
-        zonedToUtc(HOME_TZ, civil.year, civil.month, civil.day, hour, 0, 0)
+        zonedToUtc(tz, civil.year, civil.month, civil.day, hour, 0, 0)
       );
     }
     return instants;
@@ -478,11 +484,14 @@
 
   function render() {
     const now = new Date();
-    const civil = homeCivilDate(now);
-    if (followNow) selectedFraction = nowFraction(HOME_TZ, now);
+    const civil = baseCivilDate(now);
+    if (followNow) selectedFraction = nowFraction(baseTz(), now);
     const selected = new Date(instantAtFraction(civil, selectedFraction));
     const columns = columnInstants(civil);
     const zones = allZones();
+    const hasZones = zones.length > 0;
+    els.board.classList.toggle("has-zones", hasZones);
+    if (els.empty) els.empty.hidden = hasZones;
     while (peopleNames.length < zones.length) peopleNames.push("");
     if (peopleNames.length > zones.length) peopleNames.length = zones.length;
 
@@ -492,7 +501,6 @@
     editingPeopleIndex = null;
 
     zones.forEach((tz, index) => {
-      const isHome = index === 0;
       const meta = document.createElement("div");
       meta.className = "meta";
 
@@ -503,12 +511,6 @@
       const name = document.createElement("div");
       name.className = "meta-name";
       name.textContent = cityName(tz);
-      if (isHome) {
-        const badge = document.createElement("span");
-        badge.className = "local-badge";
-        badge.textContent = "Local";
-        name.appendChild(badge);
-      }
 
       const clock = document.createElement("div");
       clock.className = "meta-clock";
@@ -517,15 +519,13 @@
       if (country.textContent) meta.appendChild(country);
       meta.append(name, clock);
 
-      if (!isHome) {
-        const remove = document.createElement("button");
-        remove.className = "remove-tz";
-        remove.type = "button";
-        remove.setAttribute("aria-label", `Remove ${cityName(tz)}`);
-        remove.textContent = "×";
-        remove.addEventListener("click", () => removeZone(tz));
-        meta.appendChild(remove);
-      }
+      const remove = document.createElement("button");
+      remove.className = "remove-tz";
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Remove ${cityName(tz)}`);
+      remove.textContent = "×";
+      remove.addEventListener("click", () => removeZone(tz));
+      meta.appendChild(remove);
 
       els.side.appendChild(meta);
 
@@ -570,8 +570,8 @@
 
   function updateClocksOnly() {
     const now = new Date();
-    const civil = homeCivilDate(now);
-    if (followNow) selectedFraction = nowFraction(HOME_TZ, now);
+    const civil = baseCivilDate(now);
+    if (followNow) selectedFraction = nowFraction(baseTz(), now);
     const selected = new Date(instantAtFraction(civil, selectedFraction));
     const clocks = els.side.querySelectorAll(".meta-clock");
     allZones().forEach((tz, i) => {
@@ -581,9 +581,9 @@
   }
 
   function updateMarkers() {
-    const width = els.hoursInner.offsetWidth || 24 * 52;
+    const width = els.hoursInner.offsetWidth || 24 * 47;
     els.playhead.style.left = `${selectedFraction * width}px`;
-    const nowF = nowFraction(HOME_TZ);
+    const nowF = nowFraction(baseTz());
     els.nowMarker.style.left = `${nowF * width}px`;
     els.nowMarker.style.opacity = followNow ? "0" : "0.7";
   }
@@ -643,7 +643,7 @@
   }
 
   function addZone(tz) {
-    if (!tz || tz === HOME_TZ || extraZones.includes(tz) || !isValidTimeZone(tz)) {
+    if (!tz || extraZones.includes(tz) || !isValidTimeZone(tz)) {
       return;
     }
     extraZones.push(tz);
@@ -658,7 +658,7 @@
     const i = extraZones.indexOf(tz);
     if (i === -1) return;
     extraZones.splice(i, 1);
-    peopleNames.splice(i + 1, 1);
+    peopleNames.splice(i, 1);
     writeZonesToUrl();
     render();
   }

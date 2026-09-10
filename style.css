@@ -16,7 +16,7 @@
   --accent-dim: rgba(62, 224, 197, 0.18);
   --now: #f5c14a;
   --danger: #ff7b72;
-  --hour-w: 52px;
+  --hour-w: 47px;
   --row-h: 88px;
   --side-w: 180px;
   --people-w: 140px;
@@ -149,6 +149,30 @@ body {
   min-height: 0;
 }
 
+.board-empty {
+  display: none;
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 3.5rem 1.25rem;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.board:not(.has-zones) {
+  grid-template-columns: 1fr;
+}
+
+.board:not(.has-zones) .board-empty {
+  display: block;
+}
+
+.board:not(.has-zones) .side,
+.board:not(.has-zones) .people,
+.board:not(.has-zones) .hours-scroller {
+  display: none;
+}
+
 .side,
 .people {
   background: var(--bg-meta);
@@ -191,18 +215,6 @@ body {
   font-size: 1.15rem;
   color: var(--accent);
   margin-top: 0.15rem;
-}
-
-.local-badge {
-  display: inline-block;
-  margin-left: 0.35rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: var(--accent-dim);
-  color: var(--accent);
-  font-size: 0.65rem;
-  font-weight: 650;
-  vertical-align: middle;
 }
 
 .remove-tz {
@@ -466,7 +478,7 @@ body {
   :root {
     --side-w: 140px;
     --people-w: 110px;
-    --hour-w: 44px;
+    --hour-w: 40px;
     --row-h: 80px;
   }
 
