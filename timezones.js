@@ -226,6 +226,7 @@
     list: document.getElementById("tz-list"),
     board: document.getElementById("board"),
     empty: document.getElementById("board-empty"),
+    flagToggle: document.getElementById("flag-toggle"),
   };
 
   const partFormatters = new Map();
@@ -233,6 +234,7 @@
 
   let extraZones = readZonesFromUrl();
   let peopleNames = readPeopleFromUrl();
+  let showFlags = readFlagsFromUrl();
   let editingPeopleIndex = null;
   let followNow = true;
   let selectedFraction = 0;
@@ -302,7 +304,14 @@
     } else {
       url.searchParams.set("n", slots.map(encodeURIComponent).join(","));
     }
+    url.searchParams.set("flags", showFlags ? "1" : "0");
     history.replaceState(null, "", url);
+  }
+
+  function readFlagsFromUrl() {
+    const raw = new URLSearchParams(location.search).get("flags");
+    if (raw == null || raw === "") return true;
+    return raw !== "0" && raw.toLowerCase() !== "false" && raw.toLowerCase() !== "off";
   }
 
   function getFormatter(tz) {
@@ -425,9 +434,44 @@
       ? new Intl.DisplayNames("en", { type: "region" })
       : null;
 
+  function countryCode(tz) {
+    if (tz === "UTC" || tz === "GMT" || tz.startsWith("Etc/")) return "";
+    return TZ_COUNTRY[tz] || "";
+  }
+
+  function flagEmoji(code) {
+    if (!code || code.length !== 2) return "";
+    const A = 0x1f1e6;
+    const upper = code.toUpperCase();
+    return String.fromCodePoint(
+      A + upper.charCodeAt(0) - 65,
+      A + upper.charCodeAt(1) - 65
+    );
+  }
+
+  function flagElement(code) {
+    const slug = code.toLowerCase();
+    const img = document.createElement("img");
+    img.className = "meta-flag";
+    img.src = `https://flagcdn.com/20x15/${slug}.png`;
+    img.srcset = `https://flagcdn.com/40x30/${slug}.png 2x`;
+    img.width = 20;
+    img.height = 15;
+    img.alt = "";
+    img.setAttribute("aria-hidden", "true");
+    img.addEventListener("error", () => {
+      const fallback = document.createElement("span");
+      fallback.className = "meta-flag-text";
+      fallback.setAttribute("aria-hidden", "true");
+      fallback.textContent = flagEmoji(code);
+      img.replaceWith(fallback);
+    });
+    return img;
+  }
+
   function countryName(tz) {
     if (tz === "UTC" || tz === "GMT" || tz.startsWith("Etc/")) return "UTC";
-    const code = TZ_COUNTRY[tz];
+    const code = countryCode(tz);
     if (!code) return "";
     try {
       return regionNames ? regionNames.of(code) : code;
@@ -534,7 +578,14 @@
 
       const country = document.createElement("div");
       country.className = "meta-country";
-      country.textContent = countryName(tz);
+      const countryLabel = countryName(tz);
+      const code = countryCode(tz);
+      if (showFlags && code) country.appendChild(flagElement(code));
+      if (countryLabel) {
+        const nameEl = document.createElement("span");
+        nameEl.textContent = countryLabel;
+        country.appendChild(nameEl);
+      }
 
       const name = document.createElement("div");
       name.className = "meta-name";
@@ -545,7 +596,7 @@
       clock.textContent = getClockFormatter(tz).format(selected);
 
       meta.appendChild(handle);
-      if (country.textContent) meta.appendChild(country);
+      if (country.childNodes.length) meta.appendChild(country);
       meta.append(name, clock);
 
       const remove = document.createElement("button");
@@ -953,6 +1004,16 @@
     els.hoursScroller.scrollLeft = Math.max(0, target);
   }
 
+  if (els.flagToggle) {
+    els.flagToggle.checked = showFlags;
+    els.flagToggle.addEventListener("change", () => {
+      showFlags = els.flagToggle.checked;
+      writeZonesToUrl();
+      render();
+    });
+  }
+
+  writeZonesToUrl();
   render();
   scrollPlayheadIntoView();
 })();
